@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>写作打卡</title>
+<style>
+  :root {
+    --green: #16a34a;
+    --green-dark: #15803d;
+    --green-light: #dcfce7;
+    --bg: #f4f8f5;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-dim: #6b7280;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px 16px 48px;
+  }
+  .container { max-width: 920px; margin: 0 auto; }
+  #authView { display: none; }
+  #appView { display: none; }
+  header.top { text-align: center; margin-bottom: 20px; }
+  header.top h1 { font-size: 28px; color: var(--green-dark); }
+  header.top .today { color: var(--text-dim); font-size: 15px; margin-top: 6px; }
+  .userbar { margin-top: 8px; font-size: 14px; color: var(--text-dim); }
+  .logout-btn { margin-left: 10px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 14px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card h2 .sub { font-size: 13px; color: var(--text-dim); font-weight: normal; }
+
+  /* 登录 / 注册 */
+  .auth-card { max-width: 420px; margin: 40px auto; text-align: center; }
+  .auth-card h1 { font-size: 26px; color: var(--green-dark); margin-bottom: 6px; }
+  .auth-tip { color: var(--text-dim); font-size: 13px; margin-bottom: 18px; }
+  .auth-form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+  .auth-form label { font-size: 13px; color: var(--text-dim); }
+  .auth-form input { padding: 10px 12px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; background: #fff; }
+  .auth-form input:focus { outline: none; border-color: var(--green); }
+  .auth-btns { display: flex; gap: 10px; }
+  .auth-btns button { flex: 1; padding: 11px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .auth-btns #loginBtn { background: var(--green); color: #fff; border: none; }
+  .auth-btns #loginBtn:hover { background: var(--green-dark); }
+  .auth-btns #signupBtn { background: #fff; color: var(--green-dark); border: 2px solid var(--green); }
+  .auth-link { display: block; margin-top: 8px; font-size: 13px; color: var(--green-dark); text-decoration: none; text-align: center; }
+  .auth-link:hover { text-decoration: underline; }
+  .auth-primary { padding: 11px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; background: var(--green); color: #fff; }
+  .auth-primary:hover { background: var(--green-dark); }
+
+  /* 打卡 */
+  .tiers { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .tier-btn {
+    flex: 1 1 96px;
+    padding: 12px 8px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .tier-btn:hover:not(:disabled) { border-color: var(--green); color: var(--green-dark); }
+  .tier-btn.active { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+  .tier-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .custom-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .custom-row label { color: var(--text-dim); font-size: 14px; }
+  #wordInput {
+    width: 160px; padding: 10px 12px; border: 2px solid var(--border);
+    border-radius: 10px; font-size: 15px; background: #fff;
+  }
+  #wordInput:focus { outline: none; border-color: var(--green); }
+  #wordInput:disabled { opacity: .5; }
+  #checkinBtn {
+    padding: 10px 22px; background: var(--green); color: #fff;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  #checkinBtn:hover:not(:disabled) { background: var(--green-dark); }
+  #checkinBtn:disabled { opacity: .5; cursor: not-allowed; }
+  .msg { margin-top: 12px; font-size: 14px; min-height: 22px; }
+  .msg.ok { color: var(--green); }
+  .msg.err { color: var(--red); }
+  .msg.info { color: var(--text-dim); }
+  .words-green { color: var(--green); font-weight: 700; }
+  .words-black { color: var(--text); font-weight: 700; }
+  .words-red { color: var(--red); font-weight: 700; }
+
+  /* 日历 */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .nav-btn {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; cursor: pointer; font-size: 18px; line-height: 1;
+  }
+  .nav-btn:hover { border-color: var(--green); color: var(--green-dark); }
+  .cal-title { font-size: 17px; font-weight: 700; min-width: 140px; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .cal-dow { text-align: center; font-size: 13px; color: var(--text-dim); padding: 6px 0; }
+  .cal-cell {
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: #fff;
+    min-height: 66px;
+    padding: 6px 4px 8px;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color .12s;
+  }
+  .cal-cell:hover:not(.future):not(.empty) { border-color: var(--green); }
+  .cal-cell.empty { background: transparent; cursor: default; }
+  .cal-cell.future { opacity: .4; cursor: not-allowed; }
+  .cal-cell.today { border-color: var(--green); background: var(--green-light); }
+  .cal-cell.selected { border-color: var(--green-dark); box-shadow: 0 0 0 2px var(--green-light); }
+  .cal-cell .day-num { font-size: 13px; color: var(--text-dim); }
+  .cal-cell.today .day-num { color: var(--green-dark); font-weight: 700; }
+  .cal-cell .day-words { font-size: 13px; word-break: break-all; }
+
+  /* 记录查看 */
+  .filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .filters .f-item { display: flex; align-items: center; gap: 6px; }
+  .filters label { font-size: 13px; color: var(--text-dim); }
+  .filters select {
+    padding: 8px 10px; border: 2px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: #fff; cursor: pointer;
+  }
+  .filters select:focus { outline: none; border-color: var(--green); }
+  .filters select:disabled { opacity: .5; cursor: not-allowed; }
+  .summary { background: var(--bg); border-radius: 12px; padding: 18px; }
+  .summary .s-title { font-size: 14px; color: var(--text-dim); margin-bottom: 10px; }
+  .summary .stat-line { margin: 6px 0; font-size: 15px; }
+  .summary .stat-line b { font-size: 17px; }
+  .summary .empty-note { color: var(--text-dim); }
+
+  /* 管理后台 */
+  .admin-toolbar { margin-bottom: 10px; }
+  #adminList { overflow-x: auto; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .admin-table th, .admin-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; white-space: nowrap; }
+  .admin-table th { background: var(--bg); }
+  .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .badge.ok { background: var(--green-light); color: var(--green-dark); }
+  .badge.bad { background: #fee2e2; color: var(--red); }
+  .a-btn { padding: 4px 12px; border: 1px solid var(--green); border-radius: 8px; background: #fff; color: var(--green-dark); cursor: pointer; font-size: 13px; }
+  .a-btn:hover { background: var(--green-light); }
+  .a-btn.ghost { border-color: var(--border); color: var(--text-dim); }
+  .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mini-table th, .mini-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+
+  footer { text-align: center; color: var(--text-dim); font-size: 12px; margin-top: 8px; }
+
+  @media (max-width: 560px) {
+    .cal-cell { min-height: 54px; padding: 4px 2px 6px; }
+    .cal-cell .day-words { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 登录 / 注册 -->
+<div class="container" id="authView">
+  <div class="card auth-card">
+    <h1>✍️ 写作打卡</h1>
+    <p class="auth-tip">登录后可在任意设备查看和打卡，每个账号的记录相互独立。</p>
+    <div class="auth-form" id="loginForm">
+      <label for="authEmail">邮箱</label>
+      <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email">
+      <label for="authPassword">密码</label>
+      <input id="authPassword" type="password" placeholder="至少 6 位" autocomplete="current-password">
+      <div class="auth-btns">
+        <button id="loginBtn" type="button">登录</button>
+        <button id="signupBtn" type="button">注册</button>
+      </div>
+      <a href="#" id="forgotLink" class="auth-link">忘记密码？</a>
+      <div class="msg" id="authMsg"></div>
+    </div>
+
+    <div class="auth-form" id="forgotForm" style="display:none">
+      <label for="forgotEmail">输入注册邮箱，发送重置密码链接</label>
+      <input id="forgotEmail" type="email" placeholder="you@example.com" autocomplete="email">
+      <button id="forgotBtn" type="button" class="auth-primary">发送重置邮件</button>
+      <a href="#" id="forgotBack" class="auth-link">← 返回登录</a>
+      <div class="msg" id="forgotMsg"></div>
+    </div>
+
+    <div class="auth-form" id="resetForm" style="display:none">
+      <label for="resetPassword">新密码（至少 6 位）</label>
+      <input id="resetPassword" type="password" placeholder="至少 6 位" autocomplete="new-password">
+      <label for="resetPassword2">确认新密码</label>
+      <input id="resetPassword2" type="password" placeholder="再次输入" autocomplete="new-password">
+      <button id="resetBtn" type="button" class="auth-primary">设置新密码</button>
+      <div class="msg" id="resetMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 主应用 -->
+<div class="container" id="appView">
+  <header class="top">
+    <h1>✍️ 写作打卡</h1>
+    <p class="today" id="todayLabel"></p>
+    <p class="userbar" id="userBar"></p>
+  </header>
+
+  <section class="card" id="checkinCard">
+    <h2>打卡 / 修改 <span class="sub" id="checkinTargetLabel"></span></h2>
+    <div class="tiers" id="tierBtns"></div>
+    <div class="custom-row">
+      <label for="wordInput">自定义字数：</label>
+      <input id="wordInput" type="number" min="0" step="1" placeholder="如 2500" inputmode="numeric">
+      <button id="checkinBtn" type="button">打卡</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <section class="card">
+    <h2>每月写作记录 <span class="sub">点击日期可查看当天记录</span></h2>
+    <div class="cal-head">
+      <button class="nav-btn" id="prevMonth" title="上个月">‹</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button class="nav-btn" id="nextMonth" title="下个月">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </section>
+
+  <section class="card">
+    <h2>记录查看 <span class="sub">选择年月日查看对应记录</span></h2>
+    <div class="filters">
+      <div class="f-item"><label for="selYear">年</label><select id="selYear"></select></div>
+      <div class="f-item"><label for="selMonth">月</label><select id="selMonth"></select></div>
+      <div class="f-item"><label for="selDay">日</label><select id="selDay"></select></div>
+    </div>
+    <div class="summary" id="summary"></div>
+  </section>
+
+  <section class="card" id="adminCard">
+    <h2>管理后台 <span class="sub">查看与停止账号</span></h2>
+    <div class="admin-toolbar"><button id="adminRefresh" class="a-btn" type="button">刷新列表</button></div>
+    <div id="adminList"></div>
+  </section>
+
+  <footer id="footerNote"></footer>
+</div>
+
+<script src="supabase-js.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "writing-checkin-records";
+  var IMPORT_FLAG_KEY = "writing-checkin-imported";
+  var TIERS = [0, 2000, 4000, 6000, 10000];
+  var WEEK = ["一", "二", "三", "四", "五", "六", "日"];
+
+  // ============ 云服务配置 ============
+  // 在 https://supabase.com 创建项目后，把下面两项填成你的项目地址和 anon key。
+  // 也可以临时在浏览器控制台里设置 window.__SUPABASE_URL__ / window.__SUPABASE_ANON_KEY__。
+  var SUPABASE_URL = window.__SUPABASE_URL__ || "https://fyommsolszhqcfaiamoy.supabase.co";
+  var SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY__ || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5b21tc29sc3pocWNmYWlhbW95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NDMwNzEsImV4cCI6MjEwMTUxOTA3MX0.Bzt--m3rtm9epbDy_g7xod8Wa5hUiglXx8chHFhkkhs";
+  var CLOUD = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+  var sb = null;
+  var currentUser = null;
+  var isAdmin = false;
+  var legacyStore = {};
+  var adminUsers = [];
+  var adminRecords = [];
+
+  // ---------- 数据 ----------
+  var store = loadStore();
+  legacyStore = loadStore();
+  function loadStore() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return {};
+      var out = {};
+      Object.keys(obj).forEach(function (k) {
+        var v = obj[k];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v === "number" && isFinite(v) && v >= 0) {
+          out[k] = Math.floor(v);
+        }
+      });
+      return out;
+    } catch (e) { return {}; }
+  }
+  function saveStore() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch (e) {}
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // ---------- 日期工具（本地时区） ----------
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function keyOf(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function sameDate(a, b) {
+    return a && b &&
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+  }
+  function isFuture(d, ref) {
+    if (d.getFullYear() !== ref.getFullYear()) return d.getFullYear() > ref.getFullYear();
+    if (d.getMonth() !== ref.getMonth()) return d.getMonth() > ref.getMonth();
+    return d.getDate() > ref.getDate();
+  }
+  function fmtNum(n) { return n.toLocaleString("zh-CN"); }
+
+  // ---------- 档位与颜色 ----------
+  function tierOf(words) {
+    var t = 0;
+    TIERS.forEach(function (x) { if (words >= x) t = x; });
+    return t;
+  }
+  function wordsSpan(words) {
+    var cls = words === 0 ? "words-red" : (words >= 2000 ? "words-green" : "words-black");
+    return '<span class="' + cls + '">' + fmtNum(words) + "</span>";
+  }
+  function isEditable(d) {
+    if (!d) return false;
+    if (isFuture(d, today)) return false;
+    var start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var diffDays = Math.round((start - dd) / 86400000);
+    return diffDays >= 0 && diffDays <= 6;
+  }
+  function monthTotal(y, m) {
+    var prefix = y + "-" + pad(m) + "-";
+    var total = 0;
+    Object.keys(store).forEach(function (k) {
+      if (k.indexOf(prefix) === 0) total += store[k];
+    });
+    return total;
+  }
+  function yearTotal(y) {
+    var prefix = y + "-";
+    var total = 0;
+    Object.keys(store).forEach(function (k) {
+      if (k.indexOf(prefix) === 0) total += store[k];
+    });
+    return total;
+  }
+  function elapsedDaysInMonth(y, m) {
+    var dim = new Date(y, m, 0).getDate();
+    var todayYM = today.getFullYear() * 12 + today.getMonth();
+    var ym = y * 12 + (m - 1);
+    if (ym > todayYM) return 0;
+    if (ym === todayYM) return today.getDate();
+    return dim;
+  }
+  function elapsedDaysInYear(y) {
+    if (y > today.getFullYear()) return 0;
+    if (y === today.getFullYear()) {
+      var start = new Date(y, 0, 1);
+      var now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      return Math.round((now - start) / 86400000) + 1;
+    }
+    var leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    return leap ? 366 : 365;
+  }
+
+  // ---------- 状态 ----------
+  var today = new Date();
+  var viewYear = today.getFullYear();
+  var viewMonth = today.getMonth(); // 0-11
+  var selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // ---------- DOM ----------
+  var el = {
+    authView: document.getElementById("authView"),
+    appView: document.getElementById("appView"),
+    authEmail: document.getElementById("authEmail"),
+    authPassword: document.getElementById("authPassword"),
+    loginBtn: document.getElementById("loginBtn"),
+    signupBtn: document.getElementById("signupBtn"),
+    authMsg: document.getElementById("authMsg"),
+    loginForm: document.getElementById("loginForm"),
+    forgotForm: document.getElementById("forgotForm"),
+    resetForm: document.getElementById("resetForm"),
+    forgotLink: document.getElementById("forgotLink"),
+    forgotEmail: document.getElementById("forgotEmail"),
+    forgotBtn: document.getElementById("forgotBtn"),
+    forgotBack: document.getElementById("forgotBack"),
+    forgotMsg: document.getElementById("forgotMsg"),
+    resetPassword: document.getElementById("resetPassword"),
+    resetPassword2: document.getElementById("resetPassword2"),
+    resetBtn: document.getElementById("resetBtn"),
+    resetMsg: document.getElementById("resetMsg"),
+    userBar: document.getElementById("userBar"),
+    footerNote: document.getElementById("footerNote"),
+    todayLabel: document.getElementById("todayLabel"),
+    checkinTargetLabel: document.getElementById("checkinTargetLabel"),
+    tierBtns: document.getElementById("tierBtns"),
+    wordInput: document.getElementById("wordInput"),
+    checkinBtn: document.getElementById("checkinBtn"),
+    msg: document.getElementById("msg"),
+    calTitle: document.getElementById("calTitle"),
+    calGrid: document.getElementById("calGrid"),
+    prevMonth: document.getElementById("prevMonth"),
+    nextMonth: document.getElementById("nextMonth"),
+    selYear: document.getElementById("selYear"),
+    selMonth: document.getElementById("selMonth"),
+    selDay: document.getElementById("selDay"),
+    summary: document.getElementById("summary"),
+    adminCard: document.getElementById("adminCard"),
+    adminList: document.getElementById("adminList"),
+    adminRefresh: document.getElementById("adminRefresh")
+  };
+
+  // ---------- 启动 ----------
+  function bindAuthEvents() {
+    el.loginBtn.addEventListener("click", doLogin);
+    el.signupBtn.addEventListener("click", doSignup);
+    el.authPassword.addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
+    el.forgotLink.addEventListener("click", function (e) { e.preventDefault(); showAuthMode("forgot"); });
+    el.forgotBack.addEventListener("click", function (e) { e.preventDefault(); showAuthMode("login"); });
+    el.forgotBtn.addEventListener("click", doForgotPassword);
+    el.forgotEmail.addEventListener("keydown", function (e) { if (e.key === "Enter") doForgotPassword(); });
+    el.resetBtn.addEventListener("click", doSetNewPassword);
+    el.resetPassword2.addEventListener("keydown", function (e) { if (e.key === "Enter") doSetNewPassword(); });
+  }
+
+  function isRecoveryURL() {
+    return /(^|[#?&])type=recovery([&#]|$)/.test(window.location.hash + window.location.search);
+  }
+
+  function boot() {
+    bindAuthEvents();
+    if (!CLOUD) {
+      startApp();
+      return;
+    }
+    sb = (window.supabase && supabase.createClient)
+      ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+    if (!sb) {
+      showAuth(true, "云服务 SDK 加载失败或未配置，请检查 index.html 中的 Supabase 配置与网络。");
+      return;
+    }
+    sb.auth.getSession().then(function (res) {
+      var s = res && res.data && res.data.session;
+      if (s && s.user) {
+        if (isRecoveryURL()) showResetMode();
+        else afterLogin(s.user);
+      } else {
+        showAuth(false, "");
+      }
+    });
+    sb.auth.onAuthStateChange(function (event, session) {
+      if (event === "PASSWORD_RECOVERY") {
+        showResetMode();
+        return;
+      }
+      if (event === "SIGNED_IN" && session && session.user) {
+        afterLogin(session.user);
+      } else if (event === "SIGNED_OUT") {
+        currentUser = null;
+        isAdmin = false;
+        store = {};
+        el.adminCard.style.display = "none";
+        showAuth(false, "");
+      }
+    });
+  }
+
+  function showAuth(withTip, tip) {
+    el.appView.style.display = "none";
+    el.authView.style.display = "block";
+    showAuthMode("login");
+    el.authPassword.value = "";
+    el.authEmail.value = "";
+    if (withTip) showAuthMsg(tip, "info");
+  }
+
+  function showAuthMode(mode) {
+    el.loginForm.style.display = mode === "login" ? "" : "none";
+    el.forgotForm.style.display = mode === "forgot" ? "" : "none";
+    el.resetForm.style.display = mode === "reset" ? "" : "none";
+  }
+
+  function showResetMode() {
+    currentUser = null;
+    el.appView.style.display = "none";
+    el.authView.style.display = "block";
+    showAuthMode("reset");
+    showAuthMsgTo("resetMsg", "请设置一个新密码（至少 6 位）。", "info");
+  }
+
+  function showAuthMsgTo(id, html, type) {
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.className = "msg " + type;
+    m.innerHTML = html;
+  }
+
+  function showAppShell() {
+    el.appView.style.display = "block";
+    el.authView.style.display = "none";
+    if (!CLOUD) {
+      el.userBar.textContent = "本地模式（未配置云服务，数据仅存本机）";
+      el.footerNote.textContent = "数据保存在本浏览器（localStorage），最近 7 天（含今天）可打卡/修改，更早日期只读。";
+      el.adminCard.style.display = "none";
+      return;
+    }
+    el.userBar.textContent = (currentUser ? currentUser.email : "") + (isAdmin ? "（管理员）" : "") + "　";
+    if (!document.getElementById("logoutBtn")) {
+      var btn = document.createElement("button");
+      btn.id = "logoutBtn";
+      btn.className = "logout-btn";
+      btn.textContent = "退出登录";
+      btn.addEventListener("click", doLogout);
+      el.userBar.appendChild(btn);
+    }
+    el.footerNote.textContent = "数据已同步到云端，每个账号独立记录；最近 7 天（含今天）可打卡/修改，更早日期只读。";
+    el.adminCard.style.display = isAdmin ? "block" : "none";
+  }
+
+  function startApp() {
+    showAppShell();
+    initOnce();
+  }
+
+  function afterLogin(user) {
+    currentUser = user;
+    el.authView.style.display = "none";
+    sb.from("profiles").select("role,banned,email").eq("id", user.id).maybeSingle().then(function (res) {
+      var p = res && res.data;
+      var role = (p && p.role) || "user";
+      var banned = p ? !!p.banned : false;
+      var email = (p && p.email) || user.email;
+      if (banned) {
+        sb.auth.signOut();
+        showAuth(true, "该账号已被管理员停用，如有疑问请联系管理员。");
+        return;
+      }
+      currentUser.role = role;
+      currentUser.email = email;
+      isAdmin = role === "admin";
+      showAppShell();
+      loadCloudRecords().then(function () {
+        initOnce();
+        if (isAdmin) refreshAdminList();
+      });
+    });
+  }
+
+  async function loadCloudRecords() {
+    if (!currentUser) return;
+    var res = await sb.from("records").select("date,words,user_id");
+    if (res.error) {
+      store = loadStore();
+      showMsg("无法同步云端数据：" + res.error.message + "（已显示本机缓存）", "err");
+      return;
+    }
+    var cloud = {};
+    (res.data || []).forEach(function (r) {
+      if (r && r.date && (!r.user_id || r.user_id === currentUser.id)) cloud[r.date] = r.words;
+    });
+    // 首次登录时，把本机旧数据导入该账号（只导入一次）
+    if (!localStorage.getItem(IMPORT_FLAG_KEY)) {
+      var importedKeys = [];
+      Object.keys(legacyStore).forEach(function (k) {
+        if (cloud[k] === undefined) { cloud[k] = legacyStore[k]; importedKeys.push(k); }
+      });
+      localStorage.setItem(IMPORT_FLAG_KEY, "1");
+      for (var i = 0; i < importedKeys.length; i++) {
+        var k = importedKeys[i];
+        var u = await sb.from("records").upsert({ user_id: currentUser.id, date: k, words: cloud[k] }, { onConflict: "user_id,date" });
+        if (u.error) { showMsg("导入本机记录同步失败：" + u.error.message, "err"); break; }
+      }
+      if (importedKeys.length > 0) showMsg("已把本机原有的 " + importedKeys.length + " 条记录导入该账号。", "info");
+    }
+    store = cloud;
+    saveStore();
+  }
+
+  // ---------- 初始化（构建一次） ----------
+  function initOnce() {
+    if (!el._initialized) {
+      el._initialized = true;
+      el.todayLabel.textContent =
+        today.getFullYear() + "年" + (today.getMonth() + 1) + "月" + today.getDate() + "日 " +
+        "星期" + "日一二三四五六".charAt(today.getDay());
+      buildTierBtns();
+      buildYearOptions();
+      buildMonthOptions();
+      bindEvents();
+    }
+    el.selYear.value = String(today.getFullYear());
+    el.selMonth.value = String(today.getMonth() + 1);
+    syncDayOptions();
+    el.selDay.value = String(today.getDate());
+    syncFromFilters();
+  }
+
+  function buildTierBtns() {
+    TIERS.forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tier-btn";
+      b.dataset.tier = String(t);
+      b.textContent = (t === 0 ? "0" : fmtNum(t)) + " 字";
+      b.addEventListener("click", function () { checkin(t); });
+      el.tierBtns.appendChild(b);
+    });
+  }
+
+  function buildMonthOptions() {
+    var all = document.createElement("option");
+    all.value = "";
+    all.textContent = "全部";
+    el.selMonth.appendChild(all);
+    for (var m = 1; m <= 12; m++) {
+      var o = document.createElement("option");
+      o.value = String(m);
+      o.textContent = m + "月";
+      el.selMonth.appendChild(o);
+    }
+  }
+
+  function buildYearOptions() {
+    var minY = today.getFullYear();
+    Object.keys(store).forEach(function (k) {
+      var y = parseInt(k.slice(0, 4), 10);
+      if (y < minY) minY = y;
+    });
+    if (minY > 2020) minY = 2020;
+    var maxY = today.getFullYear() + 1;
+    for (var y = minY; y <= maxY; y++) {
+      var o = document.createElement("option");
+      o.value = String(y);
+      o.textContent = y + "年";
+      el.selYear.appendChild(o);
+    }
+  }
+
+  function bindEvents() {
+    el.prevMonth.addEventListener("click", function () { shiftMonth(-1); });
+    el.nextMonth.addEventListener("click", function () { shiftMonth(1); });
+    el.selYear.addEventListener("change", onFilterChange);
+    el.selMonth.addEventListener("change", onFilterChange);
+    el.selDay.addEventListener("change", onFilterChange);
+    el.checkinBtn.addEventListener("click", doCheckin);
+    el.wordInput.addEventListener("keydown", function (e) { if (e.key === "Enter") doCheckin(); });
+    el.adminRefresh.addEventListener("click", function () { refreshAdminList(); });
+  }
+
+  // ---------- 渲染 ----------
+  function refresh() {
+    renderCalendar();
+    renderCheckin();
+    renderSummary();
+  }
+
+  function renderCalendar() {
+    el.calTitle.textContent = viewYear + "年" + (viewMonth + 1) + "月";
+    var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    var offset = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // 周一为首日
+    var html = "";
+    WEEK.forEach(function (w) { html += '<div class="cal-dow">' + w + "</div>"; });
+    for (var i = 0; i < offset; i++) html += '<div class="cal-cell empty"></div>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var dt = new Date(viewYear, viewMonth, d);
+      var key = keyOf(dt);
+      var w = store[key];
+      var fut = isFuture(dt, today);
+      var cls = "cal-cell";
+      if (fut) cls += " future";
+      if (!fut && sameDate(dt, today)) cls += " today";
+      if (!fut && sameDate(dt, selectedDate)) cls += " selected";
+      var wordsHtml = (w !== undefined)
+        ? '<div class="day-words">' + wordsSpan(w) + "</div>"
+        : "";
+      html += '<div class="' + cls + '" data-date="' + key + '" data-future="' + (fut ? 1 : 0) + '">' +
+              '<div class="day-num">' + d + "</div>" + wordsHtml + "</div>";
+    }
+    el.calGrid.innerHTML = html;
+    el.calGrid.querySelectorAll(".cal-cell[data-date]").forEach(function (cell) {
+      if (cell.dataset.future === "1") return;
+      cell.addEventListener("click", function () {
+        var p = cell.dataset.date.split("-");
+        selectDate(new Date(+p[0], +p[1] - 1, +p[2]));
+      });
+    });
+  }
+
+  function renderCheckin() {
+    var editable = isEditable(selectedDate);
+    var cur = editable && selectedDate ? store[keyOf(selectedDate)] : undefined;
+    el.tierBtns.querySelectorAll(".tier-btn").forEach(function (b) {
+      var t = +b.dataset.tier;
+      b.disabled = !editable;
+      b.classList.toggle("active", editable && cur !== undefined && tierOf(cur) === t);
+    });
+    el.wordInput.disabled = !editable;
+    el.checkinBtn.disabled = !editable;
+    if (editable) {
+      var d = selectedDate;
+      el.checkinTargetLabel.textContent = "（" + d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日，近 7 天可修改）";
+      el.msg.className = cur !== undefined ? "msg ok" : "msg info";
+      el.msg.innerHTML = cur !== undefined
+        ? keyOf(d) + " 已打卡 " + wordsSpan(cur) + "，归档为 <b>" + fmtNum(tierOf(cur)) + "</b> 档。"
+        : keyOf(d) + " 还没有打卡，选择档位或输入字数开始吧。";
+    } else {
+      var reason = selectedDate
+        ? (isFuture(selectedDate, today) ? "未来日期不可打卡" : "该日期超过 7 天，为只读")
+        : "请先在日历中选择日期";
+      el.checkinTargetLabel.textContent = "（" + reason + "）";
+      el.msg.className = "msg info";
+      el.msg.textContent = selectedDate
+        ? "最近 7 天（含今天）内可打卡/修改，更早日期只读。"
+        : "在日历中点击日期，或使用下方年/月/日选择器选定日期后即可打卡/修改。";
+    }
+  }
+
+  function renderSummary() {
+    var y = +el.selYear.value;
+    var mVal = el.selMonth.value;
+    var m = mVal === "" ? null : +mVal;
+    var dVal = el.selDay.value;
+    var d = dVal === "" ? null : +dVal;
+    if (m === null) renderYearSummary(y);
+    else if (d === null) renderMonthSummary(y, m);
+    else renderDaySummary(y, m, d);
+  }
+
+  function renderDaySummary(y, m, d) {
+    var key = y + "-" + pad(m) + "-" + pad(d);
+    var w = store[key];
+    var html = '<div class="s-title">' + y + "年" + m + "月" + d + "日 记录</div><div class=\"s-body\">";
+    if (w === undefined) {
+      html += '<div class="empty-note">当天没有打卡记录。</div>';
+    } else {
+      html += '<div class="stat-line">当天打卡字数：' + wordsSpan(w) + "</div>" +
+              '<div class="stat-line">归档档位：<b>' + fmtNum(tierOf(w)) + "</b> 字档</div>";
+    }
+    html += '<div class="stat-line">' + y + "年" + m + "月总字数：" + wordsSpan(monthTotal(y, m)) + "</div>" +
+            '<div class="stat-line">' + y + "年总字数：" + wordsSpan(yearTotal(y)) + "</div>";
+    html += "</div>";
+    el.summary.innerHTML = html;
+  }
+
+  function renderMonthSummary(y, m) {
+    var prefix = y + "-" + pad(m) + "-";
+    var total = monthTotal(y, m), maxW = -1, maxKey = null;
+    Object.keys(store).forEach(function (k) {
+      if (k.indexOf(prefix) === 0) {
+        var v = store[k];
+        if (v > maxW) { maxW = v; maxKey = k; }
+      }
+    });
+    var elapsed = elapsedDaysInMonth(y, m);
+    var html = '<div class="s-title">' + y + "年" + m + "月 汇总</div><div class=\"s-body\">";
+    if (elapsed === 0) {
+      html += '<div class="empty-note">该月还未开始，暂无记录。</div>';
+    } else {
+      var avg = Math.round(total / elapsed);
+      html += '<div class="stat-line">本月总字数：' + wordsSpan(total) + "</div>" +
+              '<div class="stat-line">打卡天数：<b>' + elapsed + "</b> 天（含 0 字，未打卡按 0 计）</div>" +
+              '<div class="stat-line">日均（按已发生天数）：<b>' + fmtNum(avg) + "</b> 字</div>" +
+              (maxKey ? '<div class="stat-line">最高单日：<b>' + fmtNum(maxW) + "</b> 字（" + maxKey + "）</div>" : "");
+    }
+    html += '<div class="stat-line">' + y + "年总字数：" + wordsSpan(yearTotal(y)) + "</div>";
+    html += "</div>";
+    el.summary.innerHTML = html;
+  }
+
+  function renderYearSummary(y) {
+    var prefix = y + "-";
+    var total = 0, bestM = null, bestSum = -1;
+    var monthTotals = {};
+    Object.keys(store).forEach(function (k) {
+      if (k.indexOf(prefix) === 0) {
+        var v = store[k];
+        total += v;
+        var mm = +k.slice(5, 7);
+        monthTotals[mm] = (monthTotals[mm] || 0) + v;
+      }
+    });
+    Object.keys(monthTotals).forEach(function (mm) {
+      if (monthTotals[mm] > bestSum) { bestSum = monthTotals[mm]; bestM = +mm; }
+    });
+    var elapsed = elapsedDaysInYear(y);
+    var html = '<div class="s-title">' + y + "年 汇总</div><div class=\"s-body\">";
+    if (elapsed === 0) {
+      html += '<div class="empty-note">该年还未开始，暂无记录。</div>';
+    } else {
+      var avg = Math.round(total / elapsed);
+      html += '<div class="stat-line">全年总字数：' + wordsSpan(total) + "</div>" +
+              '<div class="stat-line">打卡天数：<b>' + elapsed + "</b> 天（含 0 字，未打卡按 0 计）</div>" +
+              '<div class="stat-line">日均（按已发生天数）：<b>' + fmtNum(avg) + "</b> 字</div>" +
+              (bestM ? '<div class="stat-line">最佳月份：<b>' + bestM + "</b> 月（" + fmtNum(bestSum) + " 字）</div>" : "");
+    }
+    html += "</div>";
+    el.summary.innerHTML = html;
+  }
+
+  // ---------- 筛选联动 ----------
+  function syncDayOptions() {
+    var y = +el.selYear.value;
+    var mVal = el.selMonth.value;
+    var m = mVal === "" ? null : +mVal;
+    var curVal = el.selDay.value;
+    el.selDay.innerHTML = "";
+    var allOpt = document.createElement("option");
+    allOpt.value = "";
+    allOpt.textContent = "全部";
+    el.selDay.appendChild(allOpt);
+    el.selDay.disabled = m === null;
+    if (m !== null) {
+      var dim = new Date(y, m, 0).getDate();
+      for (var d = 1; d <= dim; d++) {
+        var o = document.createElement("option");
+        o.value = String(d);
+        o.textContent = d + "日";
+        el.selDay.appendChild(o);
+      }
+    }
+    if (m !== null && curVal !== "" && +curVal <= new Date(y, m, 0).getDate()) {
+      el.selDay.value = curVal;
+    } else {
+      el.selDay.value = "";
+    }
+  }
+
+  function syncFromFilters() {
+    var y = +el.selYear.value;
+    var mVal = el.selMonth.value;
+    var m = mVal === "" ? null : +mVal;
+    viewYear = y;
+    if (m !== null) {
+      viewMonth = m - 1;
+    } else {
+      var lastKey = null;
+      Object.keys(store).forEach(function (k) {
+        if (k.indexOf(y + "-") === 0 && (lastKey === null || k > lastKey)) lastKey = k;
+      });
+      viewMonth = lastKey ? (+lastKey.slice(5, 7) - 1) : 0;
+    }
+    syncDayOptions();
+    var dVal = el.selDay.value;
+    var d = dVal === "" ? null : +dVal;
+    if (m !== null && d !== null) {
+      var dt = new Date(y, m - 1, d);
+      if (isFuture(dt, today)) { d = null; el.selDay.value = ""; }
+    }
+    selectedDate = (m !== null && d !== null) ? new Date(y, m - 1, d) : null;
+    refresh();
+  }
+
+  function onFilterChange() { syncFromFilters(); }
+
+  function shiftMonth(delta) {
+    var y = viewYear, m = viewMonth + delta;
+    if (m < 0) { m = 11; y--; }
+    if (m > 11) { m = 0; y++; }
+    if (y < 2000 || y > today.getFullYear() + 1) return;
+    el.selYear.value = String(y);
+    el.selMonth.value = String(m + 1);
+    syncFromFilters();
+  }
+
+  function selectDate(dt) {
+    selectedDate = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    el.selYear.value = String(dt.getFullYear());
+    el.selMonth.value = String(dt.getMonth() + 1);
+    syncDayOptions();
+    el.selDay.value = String(dt.getDate());
+    refresh();
+  }
+
+  // ---------- 打卡 ----------
+  function doCheckin() {
+    var raw = el.wordInput.value.trim();
+    if (raw === "") { showMsg("请输入字数后再打卡。", "err"); return; }
+    if (!/^\d+$/.test(raw)) { showMsg("字数必须是非负整数。", "err"); return; }
+    var n = Math.floor(Number(raw));
+    if (!isFinite(n)) { showMsg("字数必须是非负整数。", "err"); return; }
+    checkin(n);
+  }
+
+  function checkin(words) {
+    if (!isEditable(selectedDate)) { showMsg("仅可修改最近 7 天（含今天）内的记录。", "err"); return; }
+    var key = keyOf(selectedDate);
+    store[key] = words;
+    saveStore();
+    el.wordInput.value = "";
+    showMsg("打卡成功！" + key + " 已记录 " + wordsSpan(words) + "，归档为 <b>" + fmtNum(tierOf(words)) + "</b> 档。" + (CLOUD ? "（正在同步…）" : ""), "ok");
+    refresh();
+    if (CLOUD) upsertRecord(key, words);
+  }
+
+  async function upsertRecord(date, words) {
+    try {
+      var res = await sb.from("records").upsert({ user_id: currentUser.id, date: date, words: words }, { onConflict: "user_id,date" });
+      if (res.error) showMsg("同步失败：" + res.error.message + "（已保存在本机缓存）", "err");
+    } catch (e) {
+      showMsg("网络异常，记录已保存在本机缓存，恢复网络后打卡会重试。", "err");
+    }
+  }
+
+  function showMsg(html, type) {
+    el.msg.className = "msg " + type;
+    el.msg.innerHTML = html;
+  }
+
+  // ---------- 登录 / 注册 ----------
+  function isNetErr(msg) {
+    return /failed to fetch|networkerror|network error|load failed|fetch/i.test(msg || "");
+  }
+  function netHint(msg) {
+    return isNetErr(msg)
+      ? "（网络连接失败：如果是双击文件方式打开的，请改用 http://127.0.0.1:8765/index.html 或部署后的网址访问）"
+      : "";
+  }
+
+  function doForgotPassword() {
+    var email = el.forgotEmail.value.trim();
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showAuthMsgTo("forgotMsg", "请输入正确的邮箱。", "err"); return; }
+    var redirectTo = window.location.origin + window.location.pathname;
+    sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo }).then(function (res) {
+      if (res.error) { showAuthMsgTo("forgotMsg", "发送失败：" + res.error.message, "err"); return; }
+      showAuthMsgTo("forgotMsg", "重置邮件已发送，请查收（留意垃圾邮件）。点邮件里的链接会回到本页设置新密码。", "ok");
+    });
+  }
+
+  function doSetNewPassword() {
+    var p1 = el.resetPassword.value;
+    var p2 = el.resetPassword2.value;
+    if (!p1 || p1.length < 6) { showAuthMsgTo("resetMsg", "新密码至少 6 位。", "err"); return; }
+    if (p1 !== p2) { showAuthMsgTo("resetMsg", "两次输入的密码不一致。", "err"); return; }
+    sb.auth.updateUser({ password: p1 }).then(function (res) {
+      if (res.error) { showAuthMsgTo("resetMsg", "设置失败：" + res.error.message, "err"); return; }
+      showAuthMsgTo("resetMsg", "密码已更新！正在返回登录…", "ok");
+      sb.auth.signOut();
+      setTimeout(function () {
+        showAuthMode("login");
+        showAuthMsg("密码已更新，请用新密码登录。", "ok");
+      }, 600);
+    });
+  }
+
+  function doLogin() {
+    var email = el.authEmail.value.trim();
+    var pass = el.authPassword.value;
+    if (!email || !pass) { showAuthMsg("请输入邮箱和密码。", "err"); return; }
+    loginWithRetry(email, pass, 0);
+  }
+
+  function loginWithRetry(email, pass, tries) {
+    sb.auth.signInWithPassword({ email: email, password: pass }).then(function (res) {
+      if (res.error && isNetErr(res.error.message) && tries < 3) {
+        showAuthMsg("网络不稳定，正在重试登录…（第 " + (tries + 1) + " 次）", "info");
+        setTimeout(function () { loginWithRetry(email, pass, tries + 1); }, 1000);
+        return;
+      }
+      if (res.error) {
+        showAuthMsg("登录失败：" + res.error.message + netHint(res.error.message), "err");
+        return;
+      }
+      // SIGNED_IN 事件会触发 afterLogin
+    });
+  }
+
+  function doSignup() {
+    var email = el.authEmail.value.trim();
+    var pass = el.authPassword.value;
+    if (!email || !pass) { showAuthMsg("请输入邮箱和密码。", "err"); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showAuthMsg("邮箱格式不正确。", "err"); return; }
+    if (pass.length < 6) { showAuthMsg("密码至少 6 位。", "err"); return; }
+    signupWithRetry(email, pass, 0);
+  }
+
+  function signupWithRetry(email, pass, tries) {
+    sb.auth.signUp({ email: email, password: pass }).then(function (res) {
+      if (res.error && isNetErr(res.error.message) && tries < 3) {
+        showAuthMsg("网络不稳定，正在重试注册…（第 " + (tries + 1) + " 次）", "info");
+        setTimeout(function () { signupWithRetry(email, pass, tries + 1); }, 1000);
+        return;
+      }
+      if (res.error) { showAuthMsg("注册失败：" + res.error.message + netHint(res.error.message), "err"); return; }
+      showAuthMsg("注册成功！如果项目开启了邮箱确认，请先到邮箱确认后再登录。", "ok");
+    });
+  }
+
+  function doLogout() {
+    sb.auth.signOut();
+  }
+
+  function showAuthMsg(html, type) {
+    el.authMsg.className = "msg " + type;
+    el.authMsg.innerHTML = html;
+  }
+
+  // ---------- 管理后台 ----------
+  async function refreshAdminList() {
+    if (!isAdmin) return;
+    var box = document.getElementById("adminList");
+    box.innerHTML = "加载中…";
+    var res = await sb.from("profiles").select("id,email,role,banned,created_at").order("created_at");
+    if (res.error) { box.innerHTML = "加载失败：" + esc(res.error.message); return; }
+    var users = (res.data || []).filter(function (u) { return u && u.email; });
+    var recRes = await sb.from("records").select("date,words,user_id");
+    if (recRes.error) { box.innerHTML = "加载记录失败：" + esc(recRes.error.message); return; }
+    var recs = (recRes.data || []).filter(function (r) { return r && r.user_id; });
+    adminUsers = users;
+    adminRecords = recs;
+    var byUser = {};
+    users.forEach(function (u) { byUser[u.id] = { total: 0, days: 0, last: null }; });
+    recs.forEach(function (r) {
+      var s = byUser[r.user_id];
+      if (!s) return;
+      s.total += r.words;
+      s.days++;
+      if (!s.last || r.date > s.last) s.last = r.date;
+    });
+    var html = '<table class="admin-table"><thead><tr>' +
+      "<th>邮箱</th><th>角色</th><th>状态</th><th>总字数</th><th>记录天数</th><th>最近打卡</th><th>操作</th>" +
+      "</tr></thead><tbody>";
+    users.forEach(function (u) {
+      var s = byUser[u.id] || { total: 0, days: 0, last: null };
+      var isAdminUser = u.role === "admin";
+      var status = u.banned ? '<span class="badge bad">已停用</span>' : '<span class="badge ok">正常</span>';
+      var last = s.last || "—";
+      var action = isAdminUser
+        ? "—"
+        : '<button class="a-btn" data-act="' + (u.banned ? "unban" : "ban") + '" data-id="' + u.id + '">' + (u.banned ? "恢复" : "停止") + "</button>" +
+          ' <button class="a-btn ghost" data-act="view" data-id="' + u.id + '">查看记录</button>';
+      html += "<tr>" +
+        "<td>" + esc(u.email) + "</td>" +
+        "<td>" + (isAdminUser ? "管理员" : "用户") + "</td>" +
+        "<td>" + status + "</td>" +
+        "<td>" + fmtNum(s.total) + "</td>" +
+        "<td>" + s.days + "</td>" +
+        "<td>" + esc(last) + "</td>" +
+        "<td>" + action + "</td></tr>" +
+        '<tr class="rec-row" data-uid="' + u.id + '" style="display:none"><td colspan="7"><div class="rec-box"></div></td></tr>';
+    });
+    html += "</tbody></table>";
+    box.innerHTML = html;
+    box.querySelectorAll("button[data-act]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var act = btn.getAttribute("data-act"), id = btn.getAttribute("data-id");
+        if (act === "ban") setBanned(id, true);
+        else if (act === "unban") setBanned(id, false);
+        else if (act === "view") toggleUserRecords(id);
+      });
+    });
+  }
+
+  async function setBanned(uid, banned) {
+    var res = await sb.from("profiles").update({ banned: banned }).eq("id", uid);
+    if (res.error) { showMsg("操作失败：" + res.error.message, "err"); return; }
+    refreshAdminList();
+  }
+
+  function toggleUserRecords(uid) {
+    var row = document.querySelector('.rec-row[data-uid="' + uid + '"]');
+    if (!row) return;
+    var box = row.querySelector(".rec-box");
+    var show = row.style.display === "none";
+    row.style.display = show ? "" : "none";
+    if (show) {
+      var list = adminRecords.filter(function (r) { return r.user_id === uid; })
+        .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+      var html = list.length === 0
+        ? "该账号暂无记录。"
+        : '<table class="mini-table"><tr><th>日期</th><th>字数</th></tr>' +
+          list.slice(0, 100).map(function (r) {
+            return "<tr><td>" + esc(r.date) + "</td><td>" + fmtNum(r.words) + "</td></tr>";
+          }).join("") + "</table>";
+      box.innerHTML = html;
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
