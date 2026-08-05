@@ -281,6 +281,7 @@
   var legacyStore = {};
   var adminUsers = [];
   var adminRecords = [];
+  var recoveryMode = isRecoveryURL(); // 进入页面时 URL 是否携带邮箱重置密码令牌
 
   // ---------- 数据 ----------
   var store = loadStore();
@@ -455,32 +456,33 @@
       return;
     }
     sb.auth.getSession().then(function (res) {
+      if (recoveryMode) { showResetMode(); return; }
       var s = res && res.data && res.data.session;
-      if (s && s.user) {
-        if (isRecoveryURL()) showResetMode();
-        else afterLogin(s.user);
-      } else {
-        showAuth(false, "");
-      }
+      if (s && s.user) afterLogin(s.user);
+      else showAuth(false, "");
     });
     sb.auth.onAuthStateChange(function (event, session) {
-      if (event === "PASSWORD_RECOVERY") {
-        showResetMode();
-        return;
-      }
-      if (event === "SIGNED_IN" && session && session.user) {
-        afterLogin(session.user);
-      } else if (event === "SIGNED_OUT") {
+      if (event === "SIGNED_OUT") {
+        recoveryMode = false;
         currentUser = null;
         isAdmin = false;
         store = {};
         el.adminCard.style.display = "none";
         showAuth(false, "");
+        return;
+      }
+      if (recoveryMode || event === "PASSWORD_RECOVERY") {
+        showResetMode();
+        return;
+      }
+      if (event === "SIGNED_IN" && session && session.user) {
+        afterLogin(session.user);
       }
     });
   }
 
   function showAuth(withTip, tip) {
+    recoveryMode = false;
     el.appView.style.display = "none";
     el.authView.style.display = "block";
     showAuthMode("login");
@@ -496,6 +498,7 @@
   }
 
   function showResetMode() {
+    recoveryMode = true;
     currentUser = null;
     el.appView.style.display = "none";
     el.authView.style.display = "block";
