@@ -282,6 +282,7 @@
   var adminUsers = [];
   var adminRecords = [];
   var recoveryMode = isRecoveryURL(); // 进入页面时 URL 是否携带邮箱重置密码令牌
+  var resetLinkError = /error=/.test(window.location.hash + window.location.search); // 链接无效/过期
 
   // ---------- 数据 ----------
   var store = loadStore();
@@ -456,6 +457,10 @@
       return;
     }
     sb.auth.getSession().then(function (res) {
+      if (resetLinkError) {
+        showAuth(true, "重置链接无效或已过期，请重新申请（点“忘记密码”再发一封）。");
+        return;
+      }
       if (recoveryMode) { showResetMode(); return; }
       var s = res && res.data && res.data.session;
       if (s && s.user) afterLogin(s.user);
